@@ -1,0 +1,30 @@
+# env
+.env
+
+
+
+# OS 숨김 파일
+.DS_Store
+
+
+
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# Environment
+.env
+.env.local
+*.env
+
+# Logs
+*.log
+logs/
+EOF

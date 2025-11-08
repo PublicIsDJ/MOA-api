@@ -1,14 +1,3 @@
-# env
-.env
-
-
-
-# OS 숨김 파일
-.DS_Store
-
-
-
-
 # Python
 __pycache__/
 *.py[cod]
@@ -22,9 +11,32 @@ env/
 # Environment
 .env
 .env.local
+.env.production
 *.env
+!.env.production.example
 
 # Logs
 *.log
 logs/
-EOF
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Database
+*.db
+*.sqlite
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# etc
+docs/
+
+# Alembic
+# alembic/versions/*.pyc (이미 __pycache__에서 처리됨)

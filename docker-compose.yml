@@ -27,7 +27,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://moa_dev:moa_dev_password@db:5432/moa_local
+      DATABASE_URL: postgresql+asyncpg://moa_dev:moa_dev_password@db:5432/moa_dev
       ENVIRONMENT: development
       DEBUG: "True"
     volumes:

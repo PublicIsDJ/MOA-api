@@ -19,13 +19,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         AsyncSession: SQLAlchemy 비동기 세션
     
     Example:
-        ```python
         @router.get("/users")
         async def get_users(db: AsyncSession = Depends(get_db)):
             result = await db.execute(select(User))
             users = result.scalars().all()
             return users
-        ```
     """
     async with AsyncSessionLocal() as session:
         try:

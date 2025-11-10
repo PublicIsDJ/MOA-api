@@ -11,9 +11,9 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-| `window` 기준
+| `window` 기준 
 ```python
-
+.\venv\Scripts\activate
 ```
 
 # 의존성 내보내기

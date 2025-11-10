@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 
-from app.db.connection import Base
+from app.database.connection import Base
 from app.models.base import TimestampMixin
 from app.models.enums import GenderType, InterestType, SocialProviderType
 
@@ -118,8 +118,8 @@ class User(Base, TimestampMixin):
         # CHECK 제약조건: 일반 로그인 OR 소셜 로그인
         CheckConstraint(
             """
-            (password IS NOT NULL AND socialProvider IS NULL AND socialId IS NULL) OR
-            (password IS NULL AND socialProvider IS NOT NULL AND socialId IS NOT NULL)
+            (password IS NOT NULL AND "socialProvider" IS NULL AND "socialId" IS NULL) OR
+            (password IS NULL AND "socialProvider" IS NOT NULL AND "socialId" IS NOT NULL)
             """,
             name="chk_social_login"
         ),

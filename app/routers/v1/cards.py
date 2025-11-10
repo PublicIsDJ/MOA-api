@@ -7,11 +7,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.database import get_db
-from app.dependencies.auth import get_optional_user
+from app.core.dependencies import get_db, get_optional_user
 from app.schemas.card import CardResponse, CardListResponse
 from app.schemas.common import PaginatedResponse
-from app.crud import card as card_crud
+from app.services.card import card_service
 from app.models.user import User
 
 
@@ -45,7 +44,7 @@ async def get_cards(
     - 카드 목록 (활성화된 카드만)
     """
     # 활성화된 카드만 조회
-    cards = await card_crud.get_active_cards(
+    cards = await card_service.get_active_cards(
         db=db,
         skip=skip,
         limit=limit,
@@ -53,7 +52,7 @@ async def get_cards(
     )
     
     # 총 개수
-    total = await card_crud.get_cards_count(
+    total = await card_service.get_cards_count(
         db=db,
         activityType=activityType,
         isActive=True
@@ -102,7 +101,7 @@ async def get_card(
     **응답:**
     - 카드 상세 정보
     """
-    card = await card_crud.get_card_by_id(db, card_id)
+    card = await card_service.get_card_by_id(db, card_id)
     
     if not card:
         raise HTTPException(
@@ -142,7 +141,7 @@ async def scan_qr_code(
     **응답:**
     - 카드 정보
     """
-    card = await card_crud.get_card_by_qr_code(db, qrCode)
+    card = await card_service.get_card_by_qr_code(db, qrCode)
     
     if not card:
         raise HTTPException(

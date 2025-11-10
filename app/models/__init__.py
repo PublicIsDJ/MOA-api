@@ -1,7 +1,7 @@
 """
 SQLAlchemy 모델 통합
 """
-from app.db.connection import Base
+from app.database.connection import Base
 from app.models.user import User
 from app.models.card import Card
 from app.models.user_card_activity import UserCardActivity

@@ -4,10 +4,10 @@ Auth API 라우터
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.database import get_db
+from app.core.dependencies import get_db
 from app.schemas.user import UserCreate, UserLogin, TokenResponse, UserResponse
 from app.schemas.common import SuccessResponse
-from app.crud import user as user_crud
+from app.services.user import user_service
 from app.utils.jwt import create_access_token, create_refresh_token
 from app.utils.password import verify_password
 
@@ -41,15 +41,15 @@ async def register(
     - 생성된 사용자 정보
     """
     # userId 중복 체크
-    existing_user = await user_crud.get_user_by_userId(db, user_data.userId)
+    existing_user = await user_service.get_user_by_userId(db, user_data.userId)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="이미 사용 중인 아이디입니다"
         )
-    
+
     # 사용자 생성
-    new_user = await user_crud.create_user(
+    new_user = await user_service.create_user(
         db=db,
         userId=user_data.userId,
         password=user_data.password,
@@ -84,7 +84,7 @@ async def login(
     - `tokenType`: "bearer"
     """
     # 사용자 조회
-    user = await user_crud.get_user_by_userId(db, login_data.userId)
+    user = await user_service.get_user_by_userId(db, login_data.userId)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -106,7 +106,7 @@ async def login(
         )
     
     # 마지막 로그인 시각 업데이트
-    await user_crud.update_last_login(db, user.id)
+    await user_service.update_last_login(db, user.id)
     
     # JWT 토큰 생성
     access_token = create_access_token(user.id)

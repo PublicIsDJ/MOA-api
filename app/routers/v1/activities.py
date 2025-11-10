@@ -6,16 +6,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.database import get_db
-from app.dependencies.auth import get_current_active_user
+from app.core.dependencies import get_db, get_current_active_user
 from app.schemas.user_card_activity import (
     ActivityCreate,
     ActivityResponse,
     ActivityStatsResponse
 )
 from app.schemas.common import PaginatedResponse
-from app.crud import user_card_activity as activity_crud
-from app.crud import card as card_crud
+from app.services.user_card_activity import user_card_activity_service
+from app.services.card import card_service
 from app.models.user import User
 
 
@@ -47,7 +46,7 @@ async def create_activity(
     - 생성된 활동 기록
     """
     # 카드 존재 여부 확인
-    card = await card_crud.get_card_by_id(db, activity_data.cardId)
+    card = await card_service.get_card_by_id(db, activity_data.cardId)
     if not card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -62,7 +61,7 @@ async def create_activity(
         )
     
     # 활동 기록 생성
-    activity = await activity_crud.create_activity(
+    activity = await user_card_activity_service.create_activity(
         db=db,
         userId=current_user.id,
         cardId=activity_data.cardId,
@@ -97,7 +96,7 @@ async def get_my_activities(
     - 활동 기록 목록 (최신순)
     """
     # 활동 목록 조회
-    activities = await activity_crud.get_user_activities(
+    activities = await user_card_activity_service.get_user_activities(
         db=db,
         userId=current_user.id,
         skip=skip,
@@ -105,7 +104,7 @@ async def get_my_activities(
     )
     
     # 총 개수
-    total = await activity_crud.get_user_activities_count(
+    total = await user_card_activity_service.get_user_activities_count(
         db=db,
         userId=current_user.id
     )
@@ -140,7 +139,7 @@ async def get_activity(
     **응답:**
     - 활동 기록 상세 정보
     """
-    activity = await activity_crud.get_activity_by_id(db, activity_id)
+    activity = await user_card_activity_service.get_activity_by_id(db, activity_id)
     
     if not activity:
         raise HTTPException(
@@ -178,7 +177,7 @@ async def get_my_stats(
     - 활동한 카드 수
     - 최근 활동 날짜
     """
-    stats = await activity_crud.get_activity_stats(db, current_user.id)
+    stats = await user_card_activity_service.get_activity_stats(db, current_user.id)
     
     return ActivityStatsResponse(
         totalActivities=stats["totalActivities"],

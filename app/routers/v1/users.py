@@ -4,11 +4,10 @@ User API 라우터
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.database import get_db
-from app.dependencies.auth import get_current_active_user
+from app.core.dependencies import get_db, get_current_active_user
 from app.schemas.user import UserResponse, UserUpdate, PasswordChange
 from app.schemas.common import SuccessResponse
-from app.crud import user as user_crud
+from app.services.user import user_service
 from app.models.user import User
 from app.utils.password import verify_password
 
@@ -63,7 +62,7 @@ async def update_me(
     - 수정된 사용자 정보
     """
     # 사용자 정보 수정
-    updated_user = await user_crud.update_user(
+    updated_user = await user_service.update_user(
         db=db,
         user_id=current_user.id,
         userName=user_data.userName,
@@ -123,7 +122,7 @@ async def change_password(
         )
     
     # 새 비밀번호로 변경
-    await user_crud.update_password(
+    await user_service.update_password(
         db=db,
         user_id=current_user.id,
         new_password=password_data.newPassword
@@ -157,7 +156,7 @@ async def withdraw(
     - 성공 메시지
     """
     # 계정 비활성화
-    await user_crud.deactivate_user(db, current_user.id)
+    await user_service.deactivate_user(db, current_user.id)
     
     return SuccessResponse(
         success=True,

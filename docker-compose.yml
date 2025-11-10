@@ -8,8 +8,6 @@ services:
       POSTGRES_USER: moa_dev
       POSTGRES_PASSWORD: moa_dev_password
       POSTGRES_DB: moa_dev #DB 이름
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

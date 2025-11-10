@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 
-from app.db.connection import Base
+from app.database.connection import Base
 
 
 class UserCardActivity(Base):

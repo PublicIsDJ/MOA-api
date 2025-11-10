@@ -7,9 +7,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.database import get_db
-from app.dependencies.auth import get_current_active_user
-from app.crud import user_card_activity as activity_crud
+from app.core.dependencies import get_db, get_current_active_user
+from app.services.user_card_activity import user_card_activity_service
 from app.models.user import User
 
 
@@ -42,7 +41,7 @@ async def get_my_completed_cards(
     **응답:**
     - 카드 정보 + 마지막 활동 시각 + 활동 횟수
     """
-    completed_cards = await activity_crud.get_user_completed_cards(
+    completed_cards = await user_card_activity_service.get_user_completed_cards(
         db=db,
         userId=current_user.id,
         skip=skip,
@@ -77,7 +76,7 @@ async def get_recent_cards(
     **응답:**
     - 최근 활동 기록 목록
     """
-    recent_activities = await activity_crud.get_recent_activities(
+    recent_activities = await user_card_activity_service.get_recent_activities(
         db=db,
         userId=current_user.id,
         days=days,
@@ -115,7 +114,7 @@ async def get_card_activities(
     **응답:**
     - 특정 카드에 대한 활동 기록 목록
     """
-    activities = await activity_crud.get_user_activities_by_card(
+    activities = await user_card_activity_service.get_user_activities_by_card(
         db=db,
         userId=current_user.id,
         cardId=card_id,

@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
 
-from app.db.connection import Base
+from app.database.connection import Base
 from app.models.base import TimestampMixin
 
 

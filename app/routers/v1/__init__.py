@@ -3,7 +3,7 @@ API v1 라우터 통합
 """
 from fastapi import APIRouter
 
-from app.api.v1 import auth, users, cards, activities, archive
+from app.routers.v1 import auth, users, cards, activities, archive
 
 
 # API v1 라우터

@@ -1,1 +1,30 @@
+# Environment
+.env
+.env.*
+*.env
 
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Development
+.git/
+.gitignore
+.vscode/
+.idea
+*.md
+docs/
+
+# Logs
+*.db
+*.sqlite
+
+# Virtual environment
+venv/
+env/
+ENV/

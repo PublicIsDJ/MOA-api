@@ -15,7 +15,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.core.config import settings
 
 # DB Base 및 모델 import
-from app.db.connection import Base
+from app.database.connection import Base
 
 # 모델들을 import해야 autogenerate가 작동합니다
 from app.models import User, Card, UserCardActivity, Share

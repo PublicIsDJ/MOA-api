@@ -96,7 +96,7 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
         script: |
-          cd /root/MOA-api
+          cd /root/moa-api
           docker pull taekjunnn/moa-api:latest
           docker-compose up -d --force-recreate api
 

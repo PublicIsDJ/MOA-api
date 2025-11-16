@@ -99,10 +99,23 @@ jobs:
           cd /root/moa-api
           docker pull taekjunnn/moa-api:latest
 
-          # 기존 컨테이너 정리 및 재시작
+          # 기존 컨테이너 정리
           docker stop moa_api || true
           docker rm moa_api || true
-          docker-compose up -d api
+
+          # 새 컨테이너 시작 (docker run 사용)
+          docker run -d \
+            --name moa_api \
+            --network host \
+            --restart unless-stopped \
+            -e DATABASE_URL="postgresql+asyncpg://moa_dev:moa_dev_password@localhost:5432/moa_dev" \
+            -e ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000" \
+            -e ENVIRONMENT="production" \
+            -e DEBUG="False" \
+            -e JWT_SECRET_KEY="temp-secret-key-123" \
+            -e JWT_ALGORITHM="HS256" \
+            -e JWT_ACCESS_TOKEN_EXPIRE_MINUTES="120" \
+            taekjunnn/moa-api:latest
 
           # 마이그레이션 실행 (실패 시 배포 중단)
           if ! docker exec moa_api alembic upgrade head; then

@@ -93,15 +93,25 @@ async def refresh_token(
     "/logout",
     response_model=SuccessResponse,
     summary="로그아웃",
-    description="로그아웃 (클라이언트에서 토큰 삭제)"
+    description="리프레시 토큰 무효화"
 )
-async def logout():
+async def logout(
+    token_data: TokenRefreshRequest,
+    db: AsyncSession = Depends(get_db)
+):
     """
     ## 로그아웃
     
-    JWT는 stateless이므로 서버에서 별도 처리 없음.
-    클라이언트에서 토큰을 삭제하면 됩니다.
+    서버에서 리프레시 토큰을 폐기합니다.
+
+    **요청 본문:**
+    - `refreshToken`: 폐기할 리프레시 토큰
+
+    **응답:**
+    - 성공 메시지
     """
+    await auth_service.logout(db, token_data.refreshToken)
+
     return SuccessResponse(
         success=True,
         message="로그아웃되었습니다"

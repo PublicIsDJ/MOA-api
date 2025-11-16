@@ -12,6 +12,8 @@ from app.schemas.user import UserCreate, UserLogin, TokenResponse
 from app.services.user import user_service
 from app.utils.jwt import create_access_token, create_refresh_token, verify_token
 from app.utils.password import verify_password
+from app.repositories.refresh_token import refresh_token_repository
+import hashlib
 
 
 
@@ -112,6 +114,16 @@ class AuthService:
         access_token = create_access_token(user.id)
         refresh_token = create_refresh_token(user.id)
 
+        # 6. 리프레시 토큰 DB 저장 (해시값으로 저장)
+        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+        await refresh_token_repository.create(
+            db=db,
+            user_id=user.id,
+            token=token_hash,
+            device_info=None, # TODO: Request에서 User-Agent 추출
+            ip_address=None, # TODO: Request에서 IP 추출
+        )
+
         return TokenResponse(
             accessToken=access_token,
             refreshToken=refresh_token,
@@ -150,7 +162,26 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # 2. 사용자 존재 확인
+        # 2. DB에서 리프레시 토큰 확인 (해시값으로 조회)
+        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+        stored_token = await refresh_token_repository.get_by_token(db, token_hash)
+
+        if not stored_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="유효하지 않은 리프레시 토큰입니다",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # 3. 토큰 유효성 확인 (폐기/만료 체크)
+        if not stored_token.is_valid():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="만료되었거나 폐기된 토큰입니다",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # 4. 사용자 존재 확인
         user = await user_service.get_user_by_id(db, user_id)
         if not user:
             raise HTTPException(
@@ -159,22 +190,58 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # 계정 활성화 확인
+        # 5. 계정 활성화 확인
         if not user.isActive:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="비활성화된 계정입니다"
             )
         
-        # 4. 새 토큰 생성
+        # 6. 기존 토큰 폐기 (Refresh Token Rotation)
+        await refresh_token_repository.revoke_token(db, token_hash)
+        
+        # 7. 새 토큰 생성
         new_access_token = create_access_token(user.id)
         new_refresh_token = create_refresh_token(user.id)
+
+        # 8. 새 리프레시 토큰 DB 저장
+        new_token_hash = hashlib.sha256(new_refresh_token.encode()).hexdigest()
+        await refresh_token_repository.create(
+            db=db,
+            user_id=user.id,
+            token=new_token_hash,
+            device_info=None,
+            ip_address=None,
+        )
 
         return TokenResponse(
             accessToken=new_access_token,
             refreshToken=new_refresh_token,
             tokenType="bearer"
         )
+    
+    async def logout(
+            self,
+            db: AsyncSession,
+            refresh_token: str
+    ) -> bool:
+        """
+        로그아웃 - 리프레시 토큰 폐기
+        
+        Args:
+            db: 데이터베이스 세션
+            refresh_token: 폐기할 리프레시 토큰
+            
+        Retruns:
+            bool: 성공 여부
+        """
+        # 토큰 해시값으로 변환
+        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+
+        # 토큰 폐기
+        result = await refresh_token_repository.revoke_token(db, token_hash)
+
+        return result
     
 
 # 싱글톤 인스턴스

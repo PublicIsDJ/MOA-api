@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7 # 리프레시 토큰 만료 기간 (7일)
     JWT_EXPIRATION_HOURS: int = 2  # 액세스 토큰 만료 시간 (시간)
     
     # CORS 설정

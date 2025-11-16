@@ -7,9 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
 from app.schemas.user import UserCreate, UserLogin, TokenResponse, UserResponse
 from app.schemas.common import SuccessResponse
-from app.services.user import user_service
-from app.utils.jwt import create_access_token, create_refresh_token
-from app.utils.password import verify_password
+from app.services.auth_service import auth_service
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -40,26 +38,7 @@ async def register(
     **응답:**
     - 생성된 사용자 정보
     """
-    # userId 중복 체크
-    existing_user = await user_service.get_user_by_userId(db, user_data.userId)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 사용 중인 아이디입니다"
-        )
-
-    # 사용자 생성
-    new_user = await user_service.create_user(
-        db=db,
-        userId=user_data.userId,
-        password=user_data.password,
-        userName=user_data.userName,
-        gender=user_data.gender,
-        interest=user_data.interest,
-        phoneNumber=user_data.phoneNumber,
-    )
-    
-    return new_user
+    return await auth_service.register(db, user_data)
 
 
 @router.post(
@@ -83,40 +62,31 @@ async def login(
     - `accessToken`: JWT 액세스 토큰
     - `tokenType`: "bearer"
     """
-    # 사용자 조회
-    user = await user_service.get_user_by_userId(db, login_data.userId)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="아이디 또는 비밀번호가 올바르지 않습니다"
-        )
+    return await auth_service.login(db, login_data)
+
+
+@router.post(
+        "/refresh",
+        response_model=TokenResponse,
+        summary="토큰 갱신",
+        description="리프레시 토큰으로 새 액세스 토큰 발급"
+)
+async def refresh_token(
+    refresh_token: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    ## 토큰 갱신
     
-    # 비밀번호 검증
-    if not user.password or not verify_password(login_data.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="아이디 또는 비밀번호가 올바르지 않습니다"
-        )
+    **요청 본문:**
+    - `refresh_token`: 리프레시 토큰
     
-    # 비활성 계정 체크
-    if not user.isActive:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="비활성화된 계정입니다"
-        )
-    
-    # 마지막 로그인 시각 업데이트
-    await user_service.update_last_login(db, user.id)
-    
-    # JWT 토큰 생성
-    access_token = create_access_token(user.id)
-    refresh_token = create_refresh_token(user.id)
-    
-    return TokenResponse(
-        accessToken=access_token,
-        refreshToken=refresh_token,
-        tokenType="bearer"
-    )
+    **응답:**
+    - `accessToken`: 새로운 JWT 액세스 토큰
+    - `refreshToken`: 새로운 JWT 리프레시 토큰
+    - `tokenType`: "bearer"
+    """
+    return await auth_service.refresh_access_token(db, refresh_token)
 
 
 @router.post(

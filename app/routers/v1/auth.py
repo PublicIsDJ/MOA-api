@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db
-from app.schemas.user import UserCreate, UserLogin, TokenResponse, UserResponse
+from app.schemas.user import UserCreate, UserLogin, TokenResponse, UserResponse, TokenRefreshRequest
 from app.schemas.common import SuccessResponse
 from app.services.auth_service import auth_service
 
@@ -66,27 +66,27 @@ async def login(
 
 
 @router.post(
-        "/refresh",
-        response_model=TokenResponse,
-        summary="토큰 갱신",
-        description="리프레시 토큰으로 새 액세스 토큰 발급"
+    "/refresh",
+    response_model=TokenResponse,
+    summary="토큰 갱신",
+    description="리프레시 토큰으로 새 액세스 토큰 발급"
 )
 async def refresh_token(
-    refresh_token: str,
+    token_data: TokenRefreshRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     ## 토큰 갱신
-    
+
     **요청 본문:**
-    - `refresh_token`: 리프레시 토큰
-    
+    - `refreshToken`: 리프레시 토큰
+
     **응답:**
     - `accessToken`: 새로운 JWT 액세스 토큰
     - `refreshToken`: 새로운 JWT 리프레시 토큰
     - `tokenType`: "bearer"
     """
-    return await auth_service.refresh_access_token(db, refresh_token)
+    return await auth_service.refresh_access_token(db, token_data.refreshToken)
 
 
 @router.post(

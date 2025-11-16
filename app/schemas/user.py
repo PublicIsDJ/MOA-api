@@ -149,6 +149,13 @@ class UserResponse(BaseModel):
     }
 
 
+class TokenRefreshRequest(BaseModel):
+    """
+    토큰 갱신 요청
+    """
+    refreshToken: str = Field(description="리프레시 토큰")
+
+
 class TokenResponse(BaseModel):
     """
     JWT 토큰 응답

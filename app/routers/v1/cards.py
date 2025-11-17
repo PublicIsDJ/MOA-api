@@ -103,19 +103,6 @@ async def get_card(
     """
     card = await card_service.get_card_by_id(db, card_id)
     
-    if not card:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="카드를 찾을 수 없습니다"
-        )
-    
-    # 비활성 카드는 조회 불가
-    if not card.isActive:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="카드를 찾을 수 없습니다"
-        )
-    
     return card
 
 
@@ -143,18 +130,4 @@ async def scan_qr_code(
     """
     card = await card_service.get_card_by_qr_code(db, qrCode)
     
-    if not card:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="유효하지 않은 QR 코드입니다"
-        )
-    
-    # 비활성 카드는 조회 불가
-    if not card.isActive:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="유효하지 않은 QR 코드입니다"
-        )
-    
     return card
-

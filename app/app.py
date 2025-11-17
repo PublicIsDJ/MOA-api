@@ -19,7 +19,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
         description="MOA (Memory of Activities) - 뇌 건강 활동 기록 API",
-        version="1.0.0",
+        version="1.0.2",
         docs_url="/docs",
         redoc_url="/redoc",
     )
@@ -43,8 +43,10 @@ def create_app() -> FastAPI:
         return {
             "status": "ok",
             "message": "MOA API is running",
-            "version": "1.0.0"
+            "version": "1.0.2"
         }
+    
+    #1.0.2
     
     return app
 

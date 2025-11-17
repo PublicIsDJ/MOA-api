@@ -26,6 +26,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://moa_dev:moa_dev_password@db:5432/moa_dev
+      ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       ENVIRONMENT: development
       DEBUG: "True"
     volumes:

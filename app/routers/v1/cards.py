@@ -71,11 +71,11 @@ async def get_cards(
         for card in cards
     ]
     
-    return PaginatedResponse(
+    return PaginatedResponse.create(
         items=items,
         total=total,
-        skip=skip,
-        limit=limit
+        page=skip // limit + 1,
+        page_size=limit
     )
 
 
@@ -101,8 +101,8 @@ async def get_card(
     **응답:**
     - 카드 상세 정보
     """
-    card = await card_service.get_card_by_id(db, card_id)
-    
+    card = await card_service.get_active_card_by_id(db, card_id)
+
     return card
 
 
@@ -128,6 +128,6 @@ async def scan_qr_code(
     **응답:**
     - 카드 정보
     """
-    card = await card_service.get_card_by_qr_code(db, qrCode)
-    
+    card = await card_service.get_active_card_by_qr_code(db, qrCode)
+
     return card

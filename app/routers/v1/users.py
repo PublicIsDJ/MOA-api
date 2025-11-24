@@ -1,11 +1,11 @@
 """
 User API 라우터
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_current_active_user
-from app.schemas.user import UserResponse, UserUpdate, PasswordChange
+from app.schemas.user import UserResponse, UserUpdate, PasswordChange, AccountDelete
 from app.schemas.common import SuccessResponse
 from app.services.user import user_service
 from app.models.user import User
@@ -117,6 +117,7 @@ async def change_password(
     description="계정 비활성화 (soft delete)"
 )
 async def withdraw(
+    delete_data: AccountDelete,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -125,14 +126,21 @@ async def withdraw(
     
     **인증 필요:** Bearer 토큰
     
+    **요청 본문:**
+    - `password`: 계정 삭제 확인용 비밀번호
+
     계정을 비활성화합니다 (soft delete).
     데이터는 보관되며, 로그인이 불가능해집니다.
     
     **응답:**
     - 성공 메시지
     """
-    # 계정 비활성화
-    await user_service.deactivate_user(db, current_user.id)
+    # 계정 비활성화 (비밀번호 검증 포함)
+    await user_service.deactivate_user_with_validation(
+        db=db,
+        user=current_user,
+        password=delete_data.password
+    )
     
     return SuccessResponse(
         success=True,

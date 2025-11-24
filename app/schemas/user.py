@@ -126,6 +126,13 @@ class PasswordChange(BaseModel):
         return v
 
 
+class AccountDelete(BaseModel):
+    """
+    회원 탈퇴 요청
+    """
+    password: str = Field(description="계정 삭제 확인용 비밀번호")
+
+
 # ==================== 응답 스키마 ====================
 
 class UserResponse(BaseModel):

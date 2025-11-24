@@ -228,6 +228,36 @@ class UserService:
         # 새 비밀번호로 변경
         await self.update_password(db, user.id, new_password)
 
+    async def deactivate_user_with_validation(
+        self,
+        db: AsyncSession,
+        user: User,
+        password: str
+    ) -> None:
+        """
+        계정 비활성화 (검증 포함)
+        
+        비즈니스 로직:
+        - 소셜 로그인 사용자는 비밀번호 없이 탈퇴 가능
+        - 일반 사용자는 비밀번호 확인 필요
+        
+        Raises:
+            HTTPException: 비밀번호 불일치 시
+        """
+        from fastapi import HTTPException, status
+        from app.utils.password import verify_password
+
+        # 일반 로그인 사용자는 비밀번호 확인 필요
+        if not user.socialProvider:
+            if not user.password or not verify_password(password, user.password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="비밀번호가 일치하지 않습니다"
+                )
+            
+        # 계정 비활성화
+        await self.repo.deactivate(db, user.id)
+
 
 # 싱글톤 인스턴스
 user_service = UserService()

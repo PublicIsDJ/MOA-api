@@ -9,7 +9,6 @@ from app.schemas.user import UserResponse, UserUpdate, PasswordChange
 from app.schemas.common import SuccessResponse
 from app.services.user import user_service
 from app.models.user import User
-from app.utils.password import verify_password
 
 
 router = APIRouter(prefix="/users", tags=["User"])
@@ -72,12 +71,6 @@ async def update_me(
         profileImageUrl=user_data.profileImageUrl,
     )
     
-    if not updated_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다"
-        )
-    
     return updated_user
 
 
@@ -104,27 +97,10 @@ async def change_password(
     **응답:**
     - 성공 메시지
     """
-    # 소셜 로그인 사용자는 비밀번호 변경 불가
-    if current_user.socialProvider:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다"
-        )
-    
-    # 현재 비밀번호 확인
-    if not current_user.password or not verify_password(
-        password_data.currentPassword,
-        current_user.password
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="현재 비밀번호가 올바르지 않습니다"
-        )
-    
-    # 새 비밀번호로 변경
-    await user_service.update_password(
+    await user_service.change_password_with_validation(
         db=db,
-        user_id=current_user.id,
+        user=current_user,
+        current_password=password_data.currentPassword,
         new_password=password_data.newPassword
     )
     

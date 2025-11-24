@@ -147,6 +147,86 @@ class UserService:
     ) -> bool:
         """사용자 완전 삭제 (hard delete)"""
         return await self.repo.delete(db, user_id)
+    
+    async def update_user_profile(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        userName: Optional[str] = None,
+        gender: Optional[str] = None,
+        interest: Optional[str] = None,
+        phoneNumber: Optional[str] = None,
+        profileImageUrl: Optional[str] = None,
+    ) -> User:
+        """
+        사용자 프로필 수정 (검증 포함)
+        
+        Raises:
+            HTTPException: 사용자를 찾을 수 없는 경우
+        """
+        from fastapi import HTTPException, status
+
+        #업데이트할 데이터만 필터링
+        update_data = {}
+
+        if userName is not None:
+            update_data['userName'] = userName
+        if gender is not None:
+            update_data['gender'] = gender
+        if interest is not None:
+            update_data['interest'] = interest
+        if phoneNumber is not None:
+            update_data['phoneNumber'] = phoneNumber
+        if profileImageUrl is not None:
+            update_data['profileImageUrl'] = profileImageUrl
+
+        updated_user = await self.repo.update(db, user_id, **update_data)
+
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="사용자를 찾을 수 없습니다"
+            )
+        
+        return updated_user
+    
+    async def change_password_with_validation(
+        self,
+        db: AsyncSession,
+        user: User,
+        current_password: str,
+        new_password: str
+    ) -> None:
+        """
+        비밀번호 변경 (검증 포함)
+        
+        비즈니스 로직:
+        - 소셜 로그인 사용자 체크
+        - 현재 비밀번호 확인
+        - 새 비밀번호 해싱 및 저장
+        
+        Raises:
+            HTTPException: 검증 실패 시
+        """
+        from fastapi import HTTPException, status
+        from app.utils.password import verify_password
+
+        # 소셜 로그인 사용자는 비밀번호 변경 불가
+        if user.socialProvider:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다"
+            )
+        
+        # 현재 비밀번호 확인
+        if not user.password or not verify_password(current_password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="현재 비밀번호가 올바르지 않습니다"
+            )
+        
+        # 새 비밀번호로 변경
+        await self.update_password(db, user.id, new_password)
 
 
 # 싱글톤 인스턴스

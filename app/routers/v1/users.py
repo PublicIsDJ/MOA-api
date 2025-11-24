@@ -61,7 +61,7 @@ async def update_me(
     - 수정된 사용자 정보
     """
     # 사용자 정보 수정
-    updated_user = await user_service.update_user(
+    updated_user = await user_service.update_user_profile(
         db=db,
         user_id=current_user.id,
         userName=user_data.userName,

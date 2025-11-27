@@ -93,11 +93,11 @@ async def get_my_activities(
         userId=current_user.id
     )
     
-    return PaginatedResponse(
+    return PaginatedResponse.create(
         items=activities,
         total=total,
-        skip=skip,
-        limit=limit
+        page=(skip // limit) + 1 if limit > 0 else 1,
+        page_size=limit
     )
 
 

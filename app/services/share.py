@@ -56,6 +56,53 @@ class ShareService:
         
         return await self.repo.create(db, share)
     
+    async def create_share_with_validation(
+        self,
+        db: AsyncSession,
+        userId: UUID,
+        cardId: UUID,
+        password: Optional[str] = None,
+        expiryDate: Optional[datetime] = None,
+    ) -> Share:
+        """
+        공유 링크 생성 (검증 포함)
+
+        비즈니스 로직:
+        - 카드 존재 여부 확인
+        - 카드 활성화 상태 확인
+        - 카드 소유자 확인
+
+        Raises:
+            HTTPException: 카드를 찾을 수 없거나 권한이 없는 경우
+        """
+        from fastapi import HTTPException, status
+        from app.services.card import card_service
+
+        # 카드 존재 여부 확인
+        card = await card_service.get_card_by_id(db, cardId)
+        if not card:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="카드를 찾을 수 없습니다"
+            )
+        
+        # 카드 소유자 확인
+        if card.userId != userId:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="카드 공유 권한이 없습니다"
+            )
+        
+        # 비활성 카드는 공유 불가
+        if not card.isActive:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="비활성화된 카드는 공유할 수 없습니다"
+            )
+        
+        # 공유 생성
+        return await self.create_share(db, userId, cardId, password, expiryDate)
+    
     async def get_share_by_id(self, db: AsyncSession, share_id: UUID) -> Optional[Share]:
         """공유 링크 조회"""
         return await self.repo.get_by_id(db, share_id)
@@ -63,6 +110,40 @@ class ShareService:
     async def get_share_by_token(self, db: AsyncSession, shareToken: str) -> Optional[Share]:
         """토큰으로 공유 링크 조회"""
         return await self.repo.get_by_token(db, shareToken)
+    
+    async def get_share_by_token_with_validation(
+        self,
+        db: AsyncSession,
+        shareToken: str
+    ) -> Share:
+        """
+        토큰으로 공유 링크 조회 (검증 포함)
+
+        비즈니스 로직:
+        - 공유 링크 존재 여부 확인
+        - 유효성 검증 (활성화, 만료일)
+
+        Raises:
+            HTTPException: 공유를 찾을 수 없거나 만료된 경우
+        """
+        from fastapi import HTTPException, stauts
+
+        share = await self.repo.get_by_token(db, shareToken)
+
+        if not share:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="공유 링크를 찾을 수 없습니다"
+            )
+        
+        # 유효성 검증
+        if not self.is_share_valid(share):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="만료되었거나 비활성화된 공유 링크입니다"
+            )
+        
+        return share
     
     async def get_user_shares(
         self,
@@ -75,6 +156,15 @@ class ShareService:
         """사용자 공유 목록 조회"""
         return await self.repo.get_user_shares(db, userId, skip, limit, isActive)
     
+    async def get_user_shares_count(
+        self,
+        db: AsyncSession,
+        userId: UUID,
+        isActive: Optional[bool] = None,
+    ) -> int:
+        """사용자 공유 개수 조회"""
+        return await self.repo.get_user_shares_count(db, userId, isActive)
+    
     async def get_card_shares(
         self,
         db: AsyncSession,
@@ -84,6 +174,41 @@ class ShareService:
     ) -> List[Share]:
         """카드 공유 목록 조회"""
         return await self.repo.get_card_shares(db, cardId, skip, limit)
+    
+    async def get_share_with_permission_check(
+        self,
+        db: AsyncSession,
+        share_id: UUID,
+        userId: UUID
+    ) -> Share:
+        """
+        공유 링크 조회 (권한 확인 포함)
+
+        비즈니스 로직:
+        - 공유 링크 존재 여부 확인
+        - 본인의 공유인지 권한 확인
+
+        Raises:
+            HTTPException: 공유를 찾을 수 없거나 권한이 없는 경우
+        """
+        from fastapi import HTTPException, status
+
+        share = await self.repo.get_by_id(db, share_id)
+
+        if not share:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="공유 링크를 찾을 수 없습니다"
+            )
+        
+        # 본인의 공유만 조회 가능
+        if share.userId != userId:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="접근 권한이 없습니다"
+            )
+        
+        return share
     
     async def update_share(
         self,

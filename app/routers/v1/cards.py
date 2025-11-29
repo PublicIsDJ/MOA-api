@@ -7,8 +7,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_db, get_optional_user
-from app.schemas.card import CardResponse, CardListResponse
+from app.core.dependencies import get_db, get_optional_user, get_current_active_user
+from app.schemas.card import CardResponse, CardListResponse, CardCreate
 from app.schemas.common import PaginatedResponse
 from app.services.card import card_service
 from app.models.user import User
@@ -107,6 +107,44 @@ async def get_card(
 
 
 @router.post(
+    "",
+    response_model=CardResponse,
+    status_code=201,
+    summary="카드 생성",
+    description="새 카드 생성 (관리자용)"
+)
+async def create_card(
+    card_data: CardCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    ## 카드 생성
+
+    **인증 필요:** Bearer 토큰
+
+    **요청 본문:**
+    - `qrCode`: QR 코드
+    - `title`: 카드 제목
+    - `description`: 카드 설명 (선택)
+    - `activityType`: 활동 타입
+    - `activityData`: 활동 데이터 JSON
+    - `thumbnailUrl`: 썸네일 URL (선택)
+    - `isActive`: 활성화 여부 (기본: true)
+
+    **응답:**
+    - 생성된 카드 정보
+    """
+    card = await card_service.create_card_with_validation(
+        db=db,
+        userId=current_user.id,
+        **card_data.model_dump()
+    )
+
+    return card
+
+
+@router.post(
     "/scan",
     response_model=CardResponse,
     summary="QR 코드 스캔",
@@ -119,12 +157,12 @@ async def scan_qr_code(
 ):
     """
     ## QR 코드 스캔
-    
+
     **인증:** 선택 (비로그인 사용자도 스캔 가능)
-    
+
     **쿼리 파라미터:**
     - `qrCode`: QR 코드 문자열
-    
+
     **응답:**
     - 카드 정보
     """

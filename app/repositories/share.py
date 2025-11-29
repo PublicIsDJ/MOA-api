@@ -130,9 +130,26 @@ class ShareRepository:
         share = await self.get_by_id(db, share_id)
         if share is None:
             return False
-        
+
         await db.delete(share)
         await db.commit()
-        
+
         return True
+
+    async def get_user_shares_count(
+        self,
+        db: AsyncSession,
+        userId: UUID,
+        isActive: Optional[bool] = None,
+    ) -> int:
+        """사용자 공유 개수 조회"""
+        from sqlalchemy import func
+
+        query = select(func.count(Share.id)).where(Share.userId == userId)
+
+        if isActive is not None:
+            query = query.where(Share.isActive == isActive)
+
+        result = await db.execute(query)
+        return result.scalar() or 0
 

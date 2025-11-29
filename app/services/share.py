@@ -73,32 +73,12 @@ class ShareService:
         - 카드 소유자 확인
 
         Raises:
-            HTTPException: 카드를 찾을 수 없거나 권한이 없는 경우
+            HTTPException: 카드를 찾을 수 없는 경우
         """
-        from fastapi import HTTPException, status
         from app.services.card import card_service
 
-        # 카드 존재 여부 확인
-        card = await card_service.get_card_by_id(db, cardId)
-        if not card:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="카드를 찾을 수 없습니다"
-            )
-        
-        # 카드 소유자 확인
-        if card.userId != userId:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="카드 공유 권한이 없습니다"
-            )
-        
-        # 비활성 카드는 공유 불가
-        if not card.isActive:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="비활성화된 카드는 공유할 수 없습니다"
-            )
+        # 카드 존재 및 활성화 확인
+        await card_service.get_active_card_by_id(db, cardId)
         
         # 공유 생성
         return await self.create_share(db, userId, cardId, password, expiryDate)

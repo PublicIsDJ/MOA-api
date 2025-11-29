@@ -49,7 +49,7 @@ async def create_share(
     # 공유 링크 생성 (검증 포함)
     share = await share_service.create_share_with_validation(
         db=db,
-        userId=current_user.id
+        userId=current_user.id,
         cardId=share_data.cardId,
         password=share_data.password,
         expiryDate=share_data.expiryDate
@@ -114,7 +114,7 @@ async def get_my_shares(
 @router.get(
     "/token/{share_token}",
     response_model=ShareResponse,
-    summarty="공유 토큰으로 조회",
+    summary="공유 토큰으로 조회",
     description="공유 토큰으로 공유 링크 정보 조회"
 )
 async def get_share_by_token(

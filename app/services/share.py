@@ -126,7 +126,7 @@ class ShareService:
         Raises:
             HTTPException: 공유를 찾을 수 없거나 만료된 경우
         """
-        from fastapi import HTTPException, stauts
+        from fastapi import HTTPException, status
 
         share = await self.repo.get_by_token(db, shareToken)
 
@@ -228,6 +228,40 @@ class ShareService:
         
         return await self.repo.update(db, share_id, **kwargs)
     
+    async def update_share_with_validation(
+        self,
+        db: AsyncSession,
+        share_id: UUID,
+        userId: UUID,
+        **kwargs
+    ) -> Share:
+        """
+        공유 링크 수정 (권한 확인 포함)
+
+        비즈니스 로직: await self.update_share(db, share_id, **kwargs)
+                
+        - 권한 확인
+        - 비밀번호 해싱
+
+        Raises:
+            HTTPException: 공유를 찾을 수 없거나 권한이 없는 경우
+        """
+        # 권한 확인
+        share = await self.get_share_with_permission_check(db, share_id, userId)
+
+        # 수정
+        updated_share = await self.update_share(db, share_id, **kwargs)
+
+        if not updated_share:
+            from fastapi import HTTPException, status
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="공유 링크를 찾을 수 없습니다"
+            )
+        
+        return updated_share
+
+    
     async def increment_view_count(
         self,
         db: AsyncSession,
@@ -251,6 +285,36 @@ class ShareService:
     ) -> bool:
         """공유 링크 완전 삭제"""
         return await self.repo.delete(db, share_id)
+    
+    async def delete_share_with_validation(
+        self,
+        db: AsyncSession,
+        share_id: UUID,
+        userId: UUID
+    ) -> None:
+        """
+        공유 링크 삭제 (권한 확인 포함)
+
+        비즈니스 로직:
+        - 권한 확인
+        - 완전 삭제
+
+        Raises:
+            HTTPException: 공유를 찾을 수 없거나 권한이 없는 경우
+        """
+        from fastapi import HTTPException, status
+
+        # 권한 확인
+        await self.get_share_with_permission_check(db, share_id, userId)
+
+        # 삭제
+        success = await self.delete_share(db, share_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="공유 링크를 찾을 수 없습니다"
+            )
     
     def is_share_valid(self, share: Share) -> bool:
         """

@@ -41,10 +41,10 @@ async def create_share(
     **요청 본문:**
     - `cardId`: 공유할 카드 ID
     - `password`: 비밀번호 (선택)
-    - `expiryDate`: 만료일 (선택)
+    - `expiryDays`: 만료 일수 (1~365일, 기본 7일, null이면 만료 없음)
 
     **응답:**
-    - 생성된 공유 링크 
+    - 생성된 공유 링크
     """
     # 공유 링크 생성 (검증 포함)
     share = await share_service.create_share_with_validation(
@@ -52,7 +52,7 @@ async def create_share(
         userId=current_user.id,
         cardId=share_data.cardId,
         password=share_data.password,
-        expiryDate=share_data.expiryDate
+        expiryDays=share_data.expiryDays
     )
 
     return ShareResponse.from_orm_with_password_check(share)
@@ -195,7 +195,7 @@ async def update_share(
 
     **요청 본문:**
     - `password`: 비밀번호 (선택)
-    - `expiryDate`: 만료일 (선택)
+    - `expiryDays`: 만료 일수 (1~365일, null이면 만료 없음)
     - `isActive`: 활성화 여부 (선택)
 
     **응답:**
@@ -206,8 +206,8 @@ async def update_share(
         db=db,
         share_id=share_id,
         userId=current_user.id,
+        expiryDays=share_data.expiryDays,
         password=share_data.password,
-        expiryDate=share_data.expiryDate,
         isActive=share_data.isActive
     )
 

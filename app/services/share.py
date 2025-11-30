@@ -62,7 +62,7 @@ class ShareService:
         userId: UUID,
         cardId: UUID,
         password: Optional[str] = None,
-        expiryDate: Optional[datetime] = None,
+        expiryDays: Optional[int] = 7,
     ) -> Share:
         """
         공유 링크 생성 (검증 포함)
@@ -70,16 +70,22 @@ class ShareService:
         비즈니스 로직:
         - 카드 존재 여부 확인
         - 카드 활성화 상태 확인
-        - 카드 소유자 확인
+        - expiryDays를 expiryDate로 변환 (기본 7일, null이면 만료 없음)
 
         Raises:
             HTTPException: 카드를 찾을 수 없는 경우
         """
         from app.services.card import card_service
+        from datetime import timedelta
 
         # 카드 존재 및 활성화 확인
         await card_service.get_active_card_by_id(db, cardId)
-        
+
+        # expiryDays를 expiryDate로 변환
+        expiryDate = None
+        if expiryDays is not None:
+            expiryDate = datetime.now(timezone.utc) + timedelta(days=expiryDays)
+
         # 공유 생성
         return await self.create_share(db, userId, cardId, password, expiryDate)
     
@@ -213,21 +219,28 @@ class ShareService:
         db: AsyncSession,
         share_id: UUID,
         userId: UUID,
+        expiryDays: Optional[int] = None,
         **kwargs
     ) -> Share:
         """
         공유 링크 수정 (권한 확인 포함)
 
-        비즈니스 로직: await self.update_share(db, share_id, **kwargs)
-                
+        비즈니스 로직:
         - 권한 확인
+        - expiryDays를 expiryDate로 변환
         - 비밀번호 해싱
 
         Raises:
             HTTPException: 공유를 찾을 수 없거나 권한이 없는 경우
         """
+        from datetime import timedelta
+
         # 권한 확인
         share = await self.get_share_with_permission_check(db, share_id, userId)
+
+        # expiryDays를 expiryDate로 변환
+        if expiryDays is not None:
+            kwargs['expiryDate'] = datetime.now(timezone.utc) + timedelta(days=expiryDays)
 
         # 수정
         updated_share = await self.update_share(db, share_id, **kwargs)
@@ -238,7 +251,7 @@ class ShareService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="공유 링크를 찾을 수 없습니다"
             )
-        
+
         return updated_share
 
     

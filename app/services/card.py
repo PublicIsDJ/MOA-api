@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.card import Card
 from app.repositories.card import CardRepository
+from fastapi import HTTPException, status
 
 
 class CardService:
@@ -37,8 +38,49 @@ class CardService:
             thumbnailUrl=thumbnailUrl,
             isActive=isActive,
         )
-        
+
         return await self.repo.create(db, card)
+
+    async def create_card_with_validation(
+        self,
+        db: AsyncSession,
+        userId: UUID,  # 로그인한 사용자 (권한 확인용)
+        qrCode: str,
+        title: str,
+        activityType: str,
+        activityData: dict,
+        description: Optional[str] = None,
+        thumbnailUrl: Optional[str] = None,
+        isActive: bool = True,
+    ) -> Card:
+        """
+        카드 생성 (검증 포함)
+
+        비즈니스 로직:
+        - QR 코드 중복 확인
+
+        Raises:
+            HTTPException: QR 코드가 중복된 경우
+        """
+        # QR 코드 중복 확인
+        existing_card = await self.repo.get_by_qr_code(db, qrCode)
+        if existing_card:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 사용 중인 QR 코드입니다"
+            )
+
+        # 카드 생성
+        return await self.create_card(
+            db=db,
+            qrCode=qrCode,
+            title=title,
+            activityType=activityType,
+            activityData=activityData,
+            description=description,
+            thumbnailUrl=thumbnailUrl,
+            isActive=isActive
+        )
     
     async def get_card_by_id(self, db: AsyncSession, card_id: UUID) -> Optional[Card]:
         """ID로 카드 조회"""
@@ -102,6 +144,60 @@ class CardService:
     ) -> List[Card]:
         """활성화된 카드 목록 조회"""
         return await self.repo.get_active_cards(db, skip, limit, activityType)
+    
+    async def get_active_card_by_id(
+            self,
+            db: AsyncSession,
+            card_id: UUID
+    ) -> Card:
+        """
+        활성화된 카드 조회 (검증 포함)
+        
+        Raises:
+            HTTPException: 카드가 없거나 비활성화된 경우
+        """
+        card = await self.repo.get_by_id(db, card_id)
+
+        if not card:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="카드를 찾을 수 없습니다"
+            )
+        
+        if not card.isActive:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="카드를 찾을 수 없습니다"
+            )
+        
+        return card
+    
+    async def get_active_card_by_qr_code(
+            self,
+            db: AsyncSession,
+            qrCode: str
+    ) -> Card:
+        """
+        QR 코드로 활성화된 카드 조회 (검증 포함)
+        
+        Raises:
+            HTTPException: 카드가 없거나 비활성화된 경우
+        """
+        card = await self.repo.get_by_qr_code(db, qrCode)
+
+        if not card:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="유효하지 않은 QR 코드입니다"
+            )
+        
+        if not card.isActive:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="유효하지 않은 QR 코드입니다"
+            )
+        
+        return card
 
 
 # 싱글톤 인스턴스

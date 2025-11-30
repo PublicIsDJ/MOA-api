@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db
-from app.schemas.user import UserCreate, UserLogin, TokenResponse, UserResponse
+from app.schemas.user import UserCreate, UserLogin, TokenResponse, UserResponse, TokenRefreshRequest
 from app.schemas.common import SuccessResponse
-from app.services.auth_service import auth_service
+from app.services.auth import auth_service
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -66,42 +66,52 @@ async def login(
 
 
 @router.post(
-        "/refresh",
-        response_model=TokenResponse,
-        summary="토큰 갱신",
-        description="리프레시 토큰으로 새 액세스 토큰 발급"
+    "/refresh",
+    response_model=TokenResponse,
+    summary="토큰 갱신",
+    description="리프레시 토큰으로 새 액세스 토큰 발급"
 )
 async def refresh_token(
-    refresh_token: str,
+    token_data: TokenRefreshRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     ## 토큰 갱신
-    
+
     **요청 본문:**
-    - `refresh_token`: 리프레시 토큰
-    
+    - `refreshToken`: 리프레시 토큰
+
     **응답:**
     - `accessToken`: 새로운 JWT 액세스 토큰
     - `refreshToken`: 새로운 JWT 리프레시 토큰
     - `tokenType`: "bearer"
     """
-    return await auth_service.refresh_access_token(db, refresh_token)
+    return await auth_service.refresh_access_token(db, token_data.refreshToken)
 
 
 @router.post(
     "/logout",
     response_model=SuccessResponse,
     summary="로그아웃",
-    description="로그아웃 (클라이언트에서 토큰 삭제)"
+    description="리프레시 토큰 무효화"
 )
-async def logout():
+async def logout(
+    token_data: TokenRefreshRequest,
+    db: AsyncSession = Depends(get_db)
+):
     """
     ## 로그아웃
     
-    JWT는 stateless이므로 서버에서 별도 처리 없음.
-    클라이언트에서 토큰을 삭제하면 됩니다.
+    서버에서 리프레시 토큰을 폐기합니다.
+
+    **요청 본문:**
+    - `refreshToken`: 폐기할 리프레시 토큰
+
+    **응답:**
+    - 성공 메시지
     """
+    await auth_service.logout(db, token_data.refreshToken)
+
     return SuccessResponse(
         success=True,
         message="로그아웃되었습니다"

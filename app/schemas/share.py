@@ -15,7 +15,7 @@ class ShareCreate(BaseModel):
     """
     cardId: UUID = Field(description="공유할 카드 ID")
     password: Optional[str] = Field(default=None, min_length=4, max_length=50, description="비밀번호 (선택)")
-    expiryDate: Optional[datetime] = Field(default=None, description="만료일 (선택)")
+    expiryDays: Optional[int] = Field(default=7, ge=1, le=365, description="만료 일수 (1~365일, 기본 7일, null이면 만료 없음)")
 
 
 class ShareAccessRequest(BaseModel):
@@ -30,7 +30,7 @@ class ShareUpdate(BaseModel):
     공유 링크 수정 요청
     """
     password: Optional[str] = Field(default=None, min_length=4, max_length=50, description="비밀번호")
-    expiryDate: Optional[datetime] = Field(default=None, description="만료일")
+    expiryDays: Optional[int] = Field(default=None, ge=1, le=365, description="만료 일수 (1~365일, null이면 만료 없음)")
     isActive: Optional[bool] = Field(default=None, description="활성화 여부")
 
 

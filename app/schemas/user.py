@@ -126,6 +126,13 @@ class PasswordChange(BaseModel):
         return v
 
 
+class AccountDelete(BaseModel):
+    """
+    회원 탈퇴 요청
+    """
+    password: str = Field(description="계정 삭제 확인용 비밀번호")
+
+
 # ==================== 응답 스키마 ====================
 
 class UserResponse(BaseModel):
@@ -147,6 +154,13 @@ class UserResponse(BaseModel):
     model_config = {
         "from_attributes": True  # SQLAlchemy 모델에서 자동 변환
     }
+
+
+class TokenRefreshRequest(BaseModel):
+    """
+    토큰 갱신 요청
+    """
+    refreshToken: str = Field(description="리프레시 토큰")
 
 
 class TokenResponse(BaseModel):

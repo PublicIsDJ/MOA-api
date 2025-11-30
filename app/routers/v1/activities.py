@@ -3,7 +3,7 @@ Activity API 라우터
 """
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_current_active_user
@@ -14,7 +14,6 @@ from app.schemas.user_card_activity import (
 )
 from app.schemas.common import PaginatedResponse
 from app.services.user_card_activity import user_card_activity_service
-from app.services.card import card_service
 from app.models.user import User
 
 
@@ -24,7 +23,7 @@ router = APIRouter(prefix="/activities", tags=["Activity"])
 @router.post(
     "",
     response_model=ActivityResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=201,
     summary="활동 기록 생성",
     description="카드 활동 결과 저장"
 )
@@ -45,23 +44,8 @@ async def create_activity(
     **응답:**
     - 생성된 활동 기록
     """
-    # 카드 존재 여부 확인
-    card = await card_service.get_card_by_id(db, activity_data.cardId)
-    if not card:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="카드를 찾을 수 없습니다"
-        )
-    
-    # 비활성 카드는 활동 불가
-    if not card.isActive:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="비활성화된 카드입니다"
-        )
-    
-    # 활동 기록 생성
-    activity = await user_card_activity_service.create_activity(
+    # 활동 기록 생성 (검증 포함)
+    activity = await user_card_activity_service.create_activity_with_validation(
         db=db,
         userId=current_user.id,
         cardId=activity_data.cardId,
@@ -109,11 +93,11 @@ async def get_my_activities(
         userId=current_user.id
     )
     
-    return PaginatedResponse(
+    return PaginatedResponse.create(
         items=activities,
         total=total,
-        skip=skip,
-        limit=limit
+        page=(skip // limit) + 1 if limit > 0 else 1,
+        page_size=limit
     )
 
 
@@ -139,20 +123,12 @@ async def get_activity(
     **응답:**
     - 활동 기록 상세 정보
     """
-    activity = await user_card_activity_service.get_activity_by_id(db, activity_id)
-    
-    if not activity:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="활동 기록을 찾을 수 없습니다"
-        )
-    
-    # 본인의 활동만 조회 가능
-    if activity.userId != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="접근 권한이 없습니다"
-        )
+    # 활동 조회 (권한 확인 포함)
+    activity = await user_card_activity_service.get_activity_with_permission_check(
+        db=db,
+        activity_id=activity_id,
+        userId=current_user.id
+    )
     
     return activity
 

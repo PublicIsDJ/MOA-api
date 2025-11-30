@@ -1,15 +1,14 @@
 """
 User API 라우터
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_current_active_user
-from app.schemas.user import UserResponse, UserUpdate, PasswordChange
+from app.schemas.user import UserResponse, UserUpdate, PasswordChange, AccountDelete
 from app.schemas.common import SuccessResponse
 from app.services.user import user_service
 from app.models.user import User
-from app.utils.password import verify_password
 
 
 router = APIRouter(prefix="/users", tags=["User"])
@@ -62,7 +61,7 @@ async def update_me(
     - 수정된 사용자 정보
     """
     # 사용자 정보 수정
-    updated_user = await user_service.update_user(
+    updated_user = await user_service.update_user_profile(
         db=db,
         user_id=current_user.id,
         userName=user_data.userName,
@@ -71,12 +70,6 @@ async def update_me(
         phoneNumber=user_data.phoneNumber,
         profileImageUrl=user_data.profileImageUrl,
     )
-    
-    if not updated_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다"
-        )
     
     return updated_user
 
@@ -104,27 +97,10 @@ async def change_password(
     **응답:**
     - 성공 메시지
     """
-    # 소셜 로그인 사용자는 비밀번호 변경 불가
-    if current_user.socialProvider:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="소셜 로그인 사용자는 비밀번호를 변경할 수 없습니다"
-        )
-    
-    # 현재 비밀번호 확인
-    if not current_user.password or not verify_password(
-        password_data.currentPassword,
-        current_user.password
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="현재 비밀번호가 올바르지 않습니다"
-        )
-    
-    # 새 비밀번호로 변경
-    await user_service.update_password(
+    await user_service.change_password_with_validation(
         db=db,
-        user_id=current_user.id,
+        user=current_user,
+        current_password=password_data.currentPassword,
         new_password=password_data.newPassword
     )
     
@@ -141,6 +117,7 @@ async def change_password(
     description="계정 비활성화 (soft delete)"
 )
 async def withdraw(
+    delete_data: AccountDelete,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -149,14 +126,21 @@ async def withdraw(
     
     **인증 필요:** Bearer 토큰
     
+    **요청 본문:**
+    - `password`: 계정 삭제 확인용 비밀번호
+
     계정을 비활성화합니다 (soft delete).
     데이터는 보관되며, 로그인이 불가능해집니다.
     
     **응답:**
     - 성공 메시지
     """
-    # 계정 비활성화
-    await user_service.deactivate_user(db, current_user.id)
+    # 계정 비활성화 (비밀번호 검증 포함)
+    await user_service.deactivate_user_with_validation(
+        db=db,
+        user=current_user,
+        password=delete_data.password
+    )
     
     return SuccessResponse(
         success=True,

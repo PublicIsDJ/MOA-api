@@ -1,7 +1,7 @@
 """
 Share Service - 비즈니스 로직
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from uuid import UUID
 
@@ -307,7 +307,7 @@ class ShareService:
         if not share.isActive:
             return False
         
-        if share.expiryDate and share.expiryDate < datetime.utcnow():
+        if share.expiryDate and share.expiryDate < datetime.now(timezone.utc):
             return False
         
         return True
